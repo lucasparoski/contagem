@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Contador de Produtos</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>📦 Contagens</h1>
+
+<div id="home">
+  <input id="newCountName" placeholder="Nome da nova contagem">
+  <button onclick="createCount()">Criar contagem</button>
+  <ul id="countList"></ul>
+</div>
+
+<div id="countView" class="hidden">
+  <button class="back" onclick="goHome()">← Voltar</button>
+  <h2 id="countTitle"></h2>
+
+  <div class="box">
+    <h3>Nova sessão</h3>
+    <input id="newSessionName" placeholder="Nome da sessão">
+    <button onclick="addSession()">Adicionar sessão</button>
+  </div>
+
+  <div id="sessions"></div>
+
+  <div class="box">
+    <h3>Resumo geral</h3>
+    <ul id="summary"></ul>
+  </div>
+
+  <button class="danger" onclick="deleteCurrentCount()">Excluir contagem</button>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
