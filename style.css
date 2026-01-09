@@ -1,84 +1,136 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
   font-family: Arial, sans-serif;
   background: #f2f2f2;
-  padding: 20px;
+  padding: 12px;
+  margin: 0;
 }
 
-.hidden {
-  display: none;
-}
-
+/* Títulos */
 h1, h2, h3 {
-  margin-bottom: 10px;
+  margin: 10px 0;
 }
 
+/* Inputs e botões */
 input {
-  padding: 8px;
+  padding: 12px;
   width: 100%;
-  margin: 5px 0;
+  margin: 6px 0;
+  font-size: 16px;
 }
 
 button {
-  padding: 8px 12px;
+  padding: 12px;
+  margin-top: 6px;
+  font-size: 16px;
   cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #eee;
+}
+
+button:active {
+  transform: scale(0.98);
 }
 
 .back {
-  margin-bottom: 10px;
+  width: 100%;
+  background: #ddd;
 }
 
-.box {
-  background: #fff;
-  padding: 15px;
-  margin: 15px 0;
-  border-radius: 6px;
-}
-
+/* Containers */
+.box,
 .session {
   background: #fff;
-  padding: 15px;
-  margin-top: 15px;
-  border-radius: 6px;
+  padding: 14px;
+  margin: 12px 0;
+  border-radius: 10px;
   border: 1px solid #ddd;
 }
 
+/* Lista de contagens */
+#countList li {
+  padding: 14px;
+  margin: 6px 0;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+#countList li:active {
+  background: #eaeaea;
+}
+
+/* Produtos */
 .product-line {
   display: flex;
   justify-content: space-between;
-  margin-top: 5px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.product-line:last-child {
+  border-bottom: none;
 }
 
 .small {
-  padding: 4px 8px;
+  padding: 6px 10px;
+  font-size: 14px;
 }
 
+/* Botão perigo */
 .danger {
   background: #c0392b;
   color: white;
   border: none;
 }
 
-ul {
-  list-style: none;
-  padding: 0;
-}
-
-li {
-  padding: 5px 0;
-}
-
+/* Autocomplete */
 .autocomplete {
-  border: 1px solid #ccc;
+  position: relative;
   background: white;
-  position: absolute;
-  z-index: 10;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  max-height: 160px;
+  overflow-y: auto;
 }
 
 .autocomplete div {
-  padding: 5px;
+  padding: 12px;
+  font-size: 16px;
+  border-bottom: 1px solid #eee;
   cursor: pointer;
 }
 
-.autocomplete div:hover {
-  background: #eee;
+.autocomplete div:last-child {
+  border-bottom: none;
+}
+
+.autocomplete div:active {
+  background: #f0f0f0;
+}
+
+/* Resumo */
+#summary li {
+  padding: 6px 0;
+  font-size: 16px;
+}
+
+/* Esconder */
+.hidden {
+  display: none;
+}
+
+/* 📱 Ajustes extras só para telas grandes */
+@media (min-width: 768px) {
+  body {
+    max-width: 720px;
+    margin: auto;
+  }
 }
