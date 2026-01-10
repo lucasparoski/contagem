@@ -1,250 +1,235 @@
-let data = JSON.parse(localStorage.getItem("counts")) || [];
-let currentCountId = null;
+// ================= CONFIG =================
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzazIAwnyq-6i_yFB7PTzzYxQTzx9OSxa5HMRXzo6fH0En_rHxiP69TZxYBbeVIWOw/exec';
 
-function save() {
-  localStorage.setItem("counts", JSON.stringify(data));
+// ================= ESTADO =================
+let contagens = JSON.parse(localStorage.getItem('contagens')) || [];
+let contagemAtualId = localStorage.getItem('contagemAtualId') || null;
+
+// ================= UTIL =================
+function salvarLocal() {
+  localStorage.setItem('contagens', JSON.stringify(contagens));
 }
 
-function getAllProductNames() {
-  const set = new Set();
-  data.forEach(c =>
-    c.sessions.forEach(s =>
-      s.products.forEach(p => set.add(p.name))
-    )
-  );
-  return [...set];
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-/* ================= HOME ================= */
+// ================= SHEETS =================
+async function salvarNoSheets({ contagem, sessao, produto, quantidade }) {
+  try {
+    await fetch(SHEETS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'add',
+        contagem_id: contagem.id,
+        contagem_nome: contagem.nome,
+        sessao_nome: sessao,
+        produto_nome: produto,
+        quantidade
+      })
+    });
+  } catch (e) {
+    console.warn('Erro ao salvar no Sheets', e);
+  }
+}
 
-function renderHome() {
-  const list = document.getElementById("countList");
-  list.innerHTML = "";
+async function excluirNoSheets({ contagemId, sessao, produto }) {
+  try {
+    await fetch(SHEETS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'delete',
+        contagem_id: contagemId,
+        sessao_nome: sessao || null,
+        produto_nome: produto || null
+      })
+    });
+  } catch (e) {
+    console.warn('Erro ao excluir no Sheets', e);
+  }
+}
 
-  data.forEach(c => {
-    const li = document.createElement("li");
-    li.textContent = c.name;
-    li.onclick = () => openCount(c.id);
-    list.appendChild(li);
+// ================= CONTAGENS =================
+function criarContagem(nome) {
+  const contagem = {
+    id: uid(),
+    nome,
+    sessoes: []
+  };
+  contagens.push(contagem);
+  contagemAtualId = contagem.id;
+  localStorage.setItem('contagemAtualId', contagemAtualId);
+  salvarLocal();
+  render();
+}
+
+function excluirContagem(id) {
+  if (!confirm('Excluir esta contagem inteira?')) return;
+
+  contagens = contagens.filter(c => c.id !== id);
+  excluirNoSheets({ contagemId: id });
+
+  if (contagemAtualId === id) {
+    contagemAtualId = null;
+    localStorage.removeItem('contagemAtualId');
+  }
+  salvarLocal();
+  render();
+}
+
+// ================= SESSÕES =================
+function criarSessao(nome) {
+  const contagem = getContagemAtual();
+  if (!contagem) return;
+
+  contagem.sessoes.push({
+    nome,
+    produtos: []
   });
+  salvarLocal();
+  render();
 }
 
-function createCount() {
-  const input = document.getElementById("newCountName");
-  const name = input.value.trim();
-  if (!name) return;
+function excluirSessao(nome) {
+  if (!confirm('Excluir esta sessão?')) return;
 
-  data.push({
-    id: Date.now(),
-    name,
-    sessions: []
+  const contagem = getContagemAtual();
+  contagem.sessoes = contagem.sessoes.filter(s => s.nome !== nome);
+
+  excluirNoSheets({
+    contagemId: contagem.id,
+    sessao: nome
   });
 
-  input.value = "";
-  save();
-  renderHome();
+  salvarLocal();
+  render();
 }
 
-function openCount(id) {
-  currentCountId = id;
+// ================= PRODUTOS =================
+function adicionarProduto(sessaoNome, produtoNome, quantidade) {
+  const contagem = getContagemAtual();
+  const sessao = contagem.sessoes.find(s => s.nome === sessaoNome);
 
-  document.getElementById("home").classList.add("hidden");
-  document.getElementById("countView").classList.remove("hidden");
+  const nomePadrao = produtoNome.trim().toLowerCase();
 
-  const count = data.find(c => c.id === id);
-  document.getElementById("countTitle").textContent = count.name;
-
-  renderSessions();
-  renderSummary();
-}
-
-function goHome() {
-  currentCountId = null;
-
-  document.getElementById("countView").classList.add("hidden");
-  document.getElementById("home").classList.remove("hidden");
-
-  renderHome();
-}
-
-/* ================= SESSÕES ================= */
-
-function addSession() {
-  const input = document.getElementById("newSessionName");
-  const name = input.value.trim();
-  if (!name) return;
-
-  const count = data.find(c => c.id === currentCountId);
-  count.sessions.push({
-    id: Date.now(),
-    name,
-    products: []
-  });
-
-  input.value = "";
-  save();
-  renderSessions();
-}
-
-function renderSessions() {
-  const container = document.getElementById("sessions");
-  container.innerHTML = "";
-
-  const count = data.find(c => c.id === currentCountId);
-
-  count.sessions.forEach(session => {
-    const div = document.createElement("div");
-    div.className = "session";
-
-    div.innerHTML = `
-      <h3>${session.name}</h3>
-
-      <input
-        id="pname-${session.id}"
-        placeholder="Produto"
-        oninput="showSuggestions(${session.id})"
-        autocomplete="off"
-      >
-      <div id="auto-${session.id}" class="autocomplete"></div>
-
-      <input
-        type="number"
-        id="pqty-${session.id}"
-        placeholder="Qtd"
-      >
-
-      <button onclick="addProduct(${session.id})">Adicionar</button>
-
-      <ul>
-        ${session.products.map((p, i) => `
-          <li class="product-line">
-            ${p.name} — ${p.qty}
-            <button class="small" onclick="removeProduct(${session.id}, ${i})">✕</button>
-          </li>
-        `).join("")}
-      </ul>
-
-      <button class="danger" onclick="deleteSession(${session.id})">
-        Excluir sessão
-      </button>
-    `;
-
-    container.appendChild(div);
-  });
-}
-
-/* ================= PRODUTOS ================= */
-
-function addProduct(sessionId) {
-  const nameInput = document.getElementById(`pname-${sessionId}`);
-  const qtyInput = document.getElementById(`pqty-${sessionId}`);
-
-  const name = nameInput.value.trim();
-  const qty = Number(qtyInput.value);
-
-  if (!name || qty <= 0) return;
-
-  const count = data.find(c => c.id === currentCountId);
-  const session = count.sessions.find(s => s.id === sessionId);
-
-  const existing = session.products.find(
-    p => p.name.toLowerCase() === name.toLowerCase()
-  );
-
-  if (existing) {
-    existing.qty += qty;
+  let produto = sessao.produtos.find(p => p.nome === nomePadrao);
+  if (produto) {
+    produto.quantidade += quantidade;
   } else {
-    session.products.push({ name, qty });
+    sessao.produtos.push({
+      nome: nomePadrao,
+      quantidade
+    });
   }
 
-  nameInput.value = "";
-  qtyInput.value = "";
-  document.getElementById(`auto-${sessionId}`).innerHTML = "";
+  salvarNoSheets({
+    contagem,
+    sessao: sessaoNome,
+    produto: produtoNome,
+    quantidade
+  });
 
-  save();
-  renderSessions();
-  renderSummary();
+  salvarLocal();
+  render();
 }
 
-function removeProduct(sessionId, index) {
-  if (!confirm("Excluir este produto?")) return;
+function excluirProduto(sessaoNome, produtoNome) {
+  if (!confirm('Excluir este produto?')) return;
 
-  const count = data.find(c => c.id === currentCountId);
-  const session = count.sessions.find(s => s.id === sessionId);
+  const contagem = getContagemAtual();
+  const sessao = contagem.sessoes.find(s => s.nome === sessaoNome);
+  sessao.produtos = sessao.produtos.filter(p => p.nome !== produtoNome);
 
-  session.products.splice(index, 1);
+  excluirNoSheets({
+    contagemId: contagem.id,
+    sessao: sessaoNome,
+    produto: produtoNome
+  });
 
-  save();
-  renderSessions();
-  renderSummary();
+  salvarLocal();
+  render();
 }
 
-/* ================= AUTOCOMPLETE ================= */
+// ================= BUSCA =================
+function todosProdutosCadastrados() {
+  const set = new Set();
+  contagens.forEach(c =>
+    c.sessoes.forEach(s =>
+      s.produtos.forEach(p => set.add(p.nome))
+    )
+  );
+  return Array.from(set);
+}
 
-function showSuggestions(sessionId) {
-  const input = document.getElementById(`pname-${sessionId}`);
-  const box = document.getElementById(`auto-${sessionId}`);
-  const text = input.value.toLowerCase();
+// ================= GETTERS =================
+function getContagemAtual() {
+  return contagens.find(c => c.id === contagemAtualId);
+}
 
-  box.innerHTML = "";
-  if (!text) return;
+// ================= RENDER =================
+function render() {
+  const lista = document.getElementById('listaContagens');
+  const area = document.getElementById('areaContagem');
 
-  getAllProductNames()
-    .filter(p => p.toLowerCase().includes(text))
-    .forEach(p => {
-      const div = document.createElement("div");
-      div.textContent = p;
-      div.onclick = () => {
-        input.value = p;
-        box.innerHTML = "";
-      };
-      box.appendChild(div);
+  lista.innerHTML = '';
+  contagens.forEach(c => {
+    const btn = document.createElement('button');
+    btn.textContent = c.nome;
+    btn.onclick = () => {
+      contagemAtualId = c.id;
+      localStorage.setItem('contagemAtualId', c.id);
+      render();
+    };
+    lista.appendChild(btn);
+  });
+
+  area.innerHTML = '';
+  const contagem = getContagemAtual();
+  if (!contagem) return;
+
+  contagem.sessoes.forEach(sessao => {
+    const div = document.createElement('div');
+    div.innerHTML = `<h3>${sessao.nome}</h3>`;
+
+    sessao.produtos.forEach(p => {
+      const item = document.createElement('div');
+      item.textContent = `${p.nome} — ${p.quantidade}`;
+      item.onclick = () => excluirProduto(sessao.nome, p.nome);
+      div.appendChild(item);
     });
+
+    const btnExcluir = document.createElement('button');
+    btnExcluir.textContent = 'Excluir sessão';
+    btnExcluir.onclick = () => excluirSessao(sessao.nome);
+    div.appendChild(btnExcluir);
+
+    area.appendChild(div);
+  });
+
+  renderResumo();
 }
 
-/* ================= RESUMO ================= */
+function renderResumo() {
+  const resumo = document.getElementById('resumo');
+  if (!resumo) return;
 
-function renderSummary() {
-  const summary = {};
-  const count = data.find(c => c.id === currentCountId);
+  const total = {};
+  const contagem = getContagemAtual();
+  if (!contagem) return;
 
-  count.sessions.forEach(session =>
-    session.products.forEach(p => {
-      summary[p.name] = (summary[p.name] || 0) + p.qty;
+  contagem.sessoes.forEach(s =>
+    s.produtos.forEach(p => {
+      total[p.nome] = (total[p.nome] || 0) + p.quantidade;
     })
   );
 
-  const ul = document.getElementById("summary");
-  ul.innerHTML = "";
-
-  Object.entries(summary).forEach(([name, qty]) => {
-    const li = document.createElement("li");
-    li.textContent = `${name}: ${qty}`;
-    ul.appendChild(li);
+  resumo.innerHTML = '<h3>Resumo Geral</h3>';
+  Object.entries(total).forEach(([nome, qtd]) => {
+    const div = document.createElement('div');
+    div.textContent = `${nome} — ${qtd}`;
+    resumo.appendChild(div);
   });
 }
 
-/* ================= EXCLUSÕES ================= */
-
-function deleteSession(sessionId) {
-  if (!confirm("Excluir esta sessão inteira?")) return;
-
-  const count = data.find(c => c.id === currentCountId);
-  count.sessions = count.sessions.filter(s => s.id !== sessionId);
-
-  save();
-  renderSessions();
-  renderSummary();
-}
-
-function deleteCurrentCount() {
-  if (!confirm("Excluir esta contagem inteira? Essa ação não pode ser desfeita.")) return;
-
-  data = data.filter(c => c.id !== currentCountId);
-  save();
-  goHome();
-}
-
-/* ================= INIT ================= */
-
-renderHome();
+// ================= INIT =================
+document.addEventListener('DOMContentLoaded', render);
