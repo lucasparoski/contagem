@@ -1,5 +1,5 @@
 // ================= CONFIG =================
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzazIAwnyq-6i_yFB7PTzzYxQTzx9OSxa5HMRXzo6fH0En_rHxiP69TZxYBbeVIWOw/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzU4OK59zi3K9JShAHwOBOjJ-2DYITu8MZgO1SGmTwd65Ez9JP_OEVncSRlVNGOADL_/exec';
 
 // ================= ESTADO =================
 let contagens = JSON.parse(localStorage.getItem('contagens')) || [];
@@ -233,3 +233,4 @@ function renderResumo() {
 
 // ================= INIT =================
 document.addEventListener('DOMContentLoaded', render);
+
