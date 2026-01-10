@@ -1,7 +1,9 @@
 let data = JSON.parse(localStorage.getItem("counts")) || [];
 let currentCountId = null;
 
-const save = () => localStorage.setItem("counts", JSON.stringify(data));
+function save() {
+  localStorage.setItem("counts", JSON.stringify(data));
+}
 
 function getAllProductNames() {
   const set = new Set();
@@ -13,7 +15,8 @@ function getAllProductNames() {
   return [...set];
 }
 
-/* HOME */
+/* ================= HOME ================= */
+
 function renderHome() {
   const list = document.getElementById("countList");
   list.innerHTML = "";
@@ -27,21 +30,29 @@ function renderHome() {
 }
 
 function createCount() {
-  const name = document.getElementById("newCountName").value.trim();
+  const input = document.getElementById("newCountName");
+  const name = input.value.trim();
   if (!name) return;
 
-  data.push({ id: Date.now(), name, sessions: [] });
-  document.getElementById("newCountName").value = "";
+  data.push({
+    id: Date.now(),
+    name,
+    sessions: []
+  });
+
+  input.value = "";
   save();
   renderHome();
 }
 
 function openCount(id) {
   currentCountId = id;
+
   document.getElementById("home").classList.add("hidden");
   document.getElementById("countView").classList.remove("hidden");
-  document.getElementById("countTitle").textContent =
-    data.find(c => c.id === id).name;
+
+  const count = data.find(c => c.id === id);
+  document.getElementById("countTitle").textContent = count.name;
 
   renderSessions();
   renderSummary();
@@ -49,20 +60,28 @@ function openCount(id) {
 
 function goHome() {
   currentCountId = null;
+
   document.getElementById("countView").classList.add("hidden");
   document.getElementById("home").classList.remove("hidden");
+
   renderHome();
 }
 
-/* SESSÕES */
+/* ================= SESSÕES ================= */
+
 function addSession() {
-  const name = document.getElementById("newSessionName").value.trim();
+  const input = document.getElementById("newSessionName");
+  const name = input.value.trim();
   if (!name) return;
 
   const count = data.find(c => c.id === currentCountId);
-  count.sessions.push({ id: Date.now(), name, products: [] });
+  count.sessions.push({
+    id: Date.now(),
+    name,
+    products: []
+  });
 
-  document.getElementById("newSessionName").value = "";
+  input.value = "";
   save();
   renderSessions();
 }
@@ -80,10 +99,20 @@ function renderSessions() {
     div.innerHTML = `
       <h3>${session.name}</h3>
 
-      <input id="pname-${session.id}" placeholder="Produto" oninput="showSuggestions(${session.id})">
+      <input
+        id="pname-${session.id}"
+        placeholder="Produto"
+        oninput="showSuggestions(${session.id})"
+        autocomplete="off"
+      >
       <div id="auto-${session.id}" class="autocomplete"></div>
 
-      <input type="number" id="pqty-${session.id}" placeholder="Qtd">
+      <input
+        type="number"
+        id="pqty-${session.id}"
+        placeholder="Qtd"
+      >
+
       <button onclick="addProduct(${session.id})">Adicionar</button>
 
       <ul>
@@ -95,20 +124,23 @@ function renderSessions() {
         `).join("")}
       </ul>
 
-      <button class="danger" onclick="deleteSession(${session.id})">Excluir sessão</button>
+      <button class="danger" onclick="deleteSession(${session.id})">
+        Excluir sessão
+      </button>
     `;
 
     container.appendChild(div);
   });
 }
 
-/* PRODUTOS */
-function addProduct(sessionId) {
-  const nameEl = document.getElementById(`pname-${sessionId}`);
-  const qtyEl = document.getElementById(`pqty-${sessionId}`);
+/* ================= PRODUTOS ================= */
 
-  const name = nameEl.value.trim();
-  const qty = Number(qtyEl.value);
+function addProduct(sessionId) {
+  const nameInput = document.getElementById(`pname-${sessionId}`);
+  const qtyInput = document.getElementById(`pqty-${sessionId}`);
+
+  const name = nameInput.value.trim();
+  const qty = Number(qtyInput.value);
 
   if (!name || qty <= 0) return;
 
@@ -125,8 +157,8 @@ function addProduct(sessionId) {
     session.products.push({ name, qty });
   }
 
-  nameEl.value = "";
-  qtyEl.value = "";
+  nameInput.value = "";
+  qtyInput.value = "";
   document.getElementById(`auto-${sessionId}`).innerHTML = "";
 
   save();
@@ -135,15 +167,20 @@ function addProduct(sessionId) {
 }
 
 function removeProduct(sessionId, index) {
+  if (!confirm("Excluir este produto?")) return;
+
   const count = data.find(c => c.id === currentCountId);
   const session = count.sessions.find(s => s.id === sessionId);
+
   session.products.splice(index, 1);
+
   save();
   renderSessions();
   renderSummary();
 }
 
-/* AUTOCOMPLETE */
+/* ================= AUTOCOMPLETE ================= */
+
 function showSuggestions(sessionId) {
   const input = document.getElementById(`pname-${sessionId}`);
   const box = document.getElementById(`auto-${sessionId}`);
@@ -165,13 +202,14 @@ function showSuggestions(sessionId) {
     });
 }
 
-/* RESUMO */
+/* ================= RESUMO ================= */
+
 function renderSummary() {
   const summary = {};
   const count = data.find(c => c.id === currentCountId);
 
-  count.sessions.forEach(s =>
-    s.products.forEach(p => {
+  count.sessions.forEach(session =>
+    session.products.forEach(p => {
       summary[p.name] = (summary[p.name] || 0) + p.qty;
     })
   );
@@ -179,26 +217,34 @@ function renderSummary() {
   const ul = document.getElementById("summary");
   ul.innerHTML = "";
 
-  Object.entries(summary).forEach(([n, q]) => {
+  Object.entries(summary).forEach(([name, qty]) => {
     const li = document.createElement("li");
-    li.textContent = `${n}: ${q}`;
+    li.textContent = `${name}: ${qty}`;
     ul.appendChild(li);
   });
 }
 
-/* EXCLUSÕES */
+/* ================= EXCLUSÕES ================= */
+
 function deleteSession(sessionId) {
+  if (!confirm("Excluir esta sessão inteira?")) return;
+
   const count = data.find(c => c.id === currentCountId);
   count.sessions = count.sessions.filter(s => s.id !== sessionId);
+
   save();
   renderSessions();
   renderSummary();
 }
 
 function deleteCurrentCount() {
+  if (!confirm("Excluir esta contagem inteira? Essa ação não pode ser desfeita.")) return;
+
   data = data.filter(c => c.id !== currentCountId);
   save();
   goHome();
 }
+
+/* ================= INIT ================= */
 
 renderHome();
